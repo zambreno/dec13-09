@@ -1,0 +1,1 @@
+/usr/bin/c++   -O3 -DNDEBUG    CMakeFiles/voip.dir/VoIP.cpp.o CMakeFiles/voip.dir/Client.cpp.o CMakeFiles/voip.dir/Server.cpp.o  -o voip -rdynamic ../../lib/libsfml-audio.so.2.0 ../../lib/libsfml-network.so.2.0 ../../lib/libsfml-system.so.2.0 -lopenal -lsndfile -lpthread -lrt 

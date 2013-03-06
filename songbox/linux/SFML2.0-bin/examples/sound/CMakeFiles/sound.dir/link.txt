@@ -1,0 +1,1 @@
+/usr/bin/c++   -O3 -DNDEBUG    CMakeFiles/sound.dir/Sound.cpp.o  -o sound -rdynamic ../../lib/libsfml-audio.so.2.0 ../../lib/libsfml-system.so.2.0 -lpthread -lrt -lopenal -lsndfile 

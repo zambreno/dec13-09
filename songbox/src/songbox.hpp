@@ -56,7 +56,7 @@
 #define BACK_DEPTH 1
 
 /* Samples in the wavetable, sampling rate, and number of concurrent keys */
-#define NUM_SAMPLES 4196
+#define NUM_SAMPLES 4096
 #define SAMPLE_RATE 44100
 #define NUM_KEYS 4
 

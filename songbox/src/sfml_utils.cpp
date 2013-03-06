@@ -180,16 +180,15 @@ namespace cop {
         }
 
         /* Generate the triangle_table */
-        /* This is wrong and I no longer care */
         for (uint32_t i = 0; i < NUM_SAMPLES; i++) {
-            if (i < NUM_SAMPLES/4) {
-                voice_table[TRIANGLE_WAVE][i] = SHRT_MAX*4*(i/NUM_SAMPLES)/NUM_KEYS;
+            if (i < (NUM_SAMPLES/4-1)) {
+                voice_table[TRIANGLE_WAVE][i] = ((SHRT_MAX*4*i)/NUM_SAMPLES)/NUM_KEYS;
             }
-            else if (i < 3*NUM_SAMPLES/4) {
-                voice_table[TRIANGLE_WAVE][i] = (SHRT_MAX-SHRT_MAX*2*(i-NUM_SAMPLES/4)/NUM_SAMPLES)/NUM_KEYS;
+            else if (i < (3*NUM_SAMPLES/4-1)) {
+                voice_table[TRIANGLE_WAVE][i] = ((-4*i*SHRT_MAX)/NUM_SAMPLES + 2*SHRT_MAX)/NUM_KEYS;
             }
             else {
-                voice_table[TRIANGLE_WAVE][i] = (-32767+4*(i-3*NUM_SAMPLES/4)/NUM_SAMPLES)/NUM_KEYS;
+                voice_table[TRIANGLE_WAVE][i] = ((SHRT_MAX*4*i)/NUM_SAMPLES+4*SHRT_MIN)/NUM_KEYS;
             }
         }
 
@@ -202,7 +201,7 @@ namespace cop {
         /* Also not working - who knows */
         srand(0);
         for (uint32_t i = 0; i < NUM_SAMPLES; i++) {
-            voice_table[NOISE_WAVE][i] = (2*(rand()%SHRT_MAX)+SHRT_MIN)/NUM_KEYS;
+            voice_table[NOISE_WAVE][i] = (2*(rand()%SHRT_MAX)+SHRT_MIN);
         }
 
 

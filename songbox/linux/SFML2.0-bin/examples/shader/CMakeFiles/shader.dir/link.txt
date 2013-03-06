@@ -1,0 +1,1 @@
+/usr/bin/c++   -O3 -DNDEBUG    CMakeFiles/shader.dir/Shader.cpp.o  -o shader -rdynamic ../../lib/libsfml-graphics.so.2.0 ../../lib/libsfml-window.so.2.0 ../../lib/libsfml-system.so.2.0 -lXrandr -lpthread -lrt -lfreetype -lGLEW -ljpeg -lGL -lX11 -lXext 

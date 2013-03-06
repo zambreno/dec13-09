@@ -1,0 +1,1 @@
+/usr/bin/c++   -O3 -DNDEBUG    CMakeFiles/sound-capture.dir/SoundCapture.cpp.o  -o sound-capture -rdynamic ../../lib/libsfml-audio.so.2.0 ../../lib/libsfml-system.so.2.0 -lpthread -lrt -lopenal -lsndfile 

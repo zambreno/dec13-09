@@ -1,0 +1,1 @@
+/usr/bin/c++   -O3 -DNDEBUG    CMakeFiles/sockets.dir/Sockets.cpp.o CMakeFiles/sockets.dir/TCP.cpp.o CMakeFiles/sockets.dir/UDP.cpp.o  -o sockets -rdynamic ../../lib/libsfml-network.so.2.0 ../../lib/libsfml-system.so.2.0 -lpthread -lrt 

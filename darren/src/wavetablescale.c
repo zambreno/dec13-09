@@ -41,34 +41,50 @@
  * requested that these non-binding requests be included along with the 
  * license above.
  */
+ 
 #include <stdio.h>
 #include <math.h>
 #include "portaudio.h"
 
+//NUM-SECONDS is simply a playback mechanism
 #define NUM_SECONDS   (1)
+
+//Sample rate of the soundcard
 #define SAMPLE_RATE   (32000)
+
+//Audio buffer size
 #define FRAMES_PER_BUFFER  (1024)
 
+//Power of wavetable size (wavetable size = 2 ^ POWER)
+#define POWER (4)
+#define TABLE_SIZE   ((int)pow(2,POWER))
+
+//Pi, for generation of sine table
 #ifndef M_PI
 #define M_PI  (3.14159265)
 #endif
-#define POWER (4)
-#define TABLE_SIZE   ((int)pow(2,POWER))
+
+//Note struct
 typedef struct
 {
     float sine[TABLE_SIZE];
     unsigned short phase;
     char message[20];
+    int frequency;
 }
 paTestData;
 
 
-volatile current_freq;
 
-//Frequency/Phase Calculations
+
+
+//Phase stepsize calculation from frequency
 unsigned int stepsize(int freq){
+	//Maximum value of phase scale (2^4 in this case)
 	float phasescale = 0xFFFF;
 	float step;
+	
+	//Our equation!
 	step = (freq*phasescale)/SAMPLE_RATE;
 	return (unsigned short)step;
 }
@@ -96,7 +112,7 @@ static int patestCallback( const void *inputBuffer, void *outputBuffer,
     for( i=0; i<framesPerBuffer; i++ )
     {
         *out++ = data->sine[(data->phase)>>(16-POWER)];  /* Advance Phase */
-        data->phase += stepsize(current_freq);
+        data->phase += stepsize(data->frequency);
     }
     
     return paContinue;
@@ -109,7 +125,6 @@ static int patestCallback( const void *inputBuffer, void *outputBuffer,
 static void StreamFinished( void* userData )
 {
    paTestData *data = (paTestData *) userData;
-   printf( "Stream Completed: %s\n", data->message );
 }
 
 /*******************************************************************/
@@ -122,8 +137,6 @@ int main(void)
     paTestData data;
     int i;
 
-    
-    printf("PortAudio Test: output sine wave. SR = %d, BufSize = %d\n", SAMPLE_RATE, FRAMES_PER_BUFFER);
     
     /* initialise sinusoidal wavetable */
     for( i=0; i<TABLE_SIZE; i++ )
@@ -145,6 +158,8 @@ int main(void)
     outputParameters.suggestedLatency = Pa_GetDeviceInfo( outputParameters.device )->defaultLowOutputLatency;
     outputParameters.hostApiSpecificStreamInfo = NULL;
 
+
+	//Open Audio Stream
     err = Pa_OpenStream(
               &stream,
               NULL, /* no input */
@@ -163,46 +178,48 @@ int main(void)
     err = Pa_StartStream( stream );
     if( err != paNoError ) goto error;
 
-    printf("Play for %d seconds.\n", NUM_SECONDS );
-    int j;
-    for(j=0;j<8;j++){
-    	switch(j){
+    for(i=0;i<8;i++){
+    	switch(i){
     		case 0:
-    			current_freq = 261;
+    			data.frequency = 261;
     			break;
     		case 1:
-    			current_freq = 293;
+    			data.frequency = 293;
     			break;
     		case 2:
-    			current_freq = 329;
+    			data.frequency = 329;
     			break;
 	    	case 3:
-   	 			current_freq = 349;
+   	 			data.frequency = 349;
    	 			break;
    		 	case 4:
-    			current_freq = 391;
+    			data.frequency = 391;
     			break;
    		 	case 5:
-    			current_freq = 440;
+    			data.frequency = 440;
     			break;
     		case 6:
-    			current_freq = 493;
+    			data.frequency = 493;
     			break;
     		case 7:
-    			current_freq = 523;
+    			data.frequency = 523;
     			break; 
     	}   	
     	Pa_Sleep( NUM_SECONDS * 100 );  
     }
-            
+    
+    
+    //Stop stream        
     err = Pa_StopStream( stream );
     if( err != paNoError ) goto error;
-
+	
+	
+	//Close stream
     err = Pa_CloseStream( stream );
     if( err != paNoError ) goto error;
-
+	
+	//Terminate Portaudio
     Pa_Terminate();
-    printf("Test finished.\n");
     
     return err;
 error:

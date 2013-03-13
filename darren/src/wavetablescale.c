@@ -53,7 +53,7 @@
 #define SAMPLE_RATE   (32000)
 
 //Audio buffer size
-#define FRAMES_PER_BUFFER  (1024)
+#define FRAMES_PER_BUFFER  (256)
 
 //Power of wavetable size (wavetable size = 2 ^ POWER)
 #define POWER (4)
@@ -75,8 +75,53 @@ typedef struct
 paTestData;
 
 
+//Generate Tri Wave
+void triangle(paTestData data){
+    data.sine[0] = 0;
+    data.sine[1] = .25;
+    data.sine[2] = .5;
+    data.sine[3] = .75;
+    data.sine[4] = 1;
+    data.sine[5] = .75;
+    data.sine[6] = .5;
+    data.sine[7] = .25;
+    data.sine[8] = 0;
+    data.sine[9] = -.25;
+    data.sine[10] = -.5;
+    data.sine[11] = -.75;
+    data.sine[12] = -1;
+    data.sine[13] = -.75;
+    data.sine[14] = -.5;
+    data.sine[15] = -.25;
+}
 
+void square(paTestData data){
+    data.sine[0] = -1;
+    data.sine[1] = -1;
+    data.sine[2] = -1;
+    data.sine[3] = -1;
+    data.sine[4] = -1;
+    data.sine[5] = -1;
+    data.sine[6] = -1;
+    data.sine[7] = -1;
+    data.sine[8] = -1;
+    data.sine[9] = -1;
+    data.sine[10] = -1;
+    data.sine[11] = -1;
+    data.sine[12] = 1;
+    data.sine[13] = 1;
+    data.sine[14] = 1;
+    data.sine[15] = 1;
+}
 
+void sine(paTestData data){
+    /* initialise sinusoidal wavetable */
+    int i;
+    for( i=0; i<TABLE_SIZE; i++ )
+    {
+        data.sine[i] = (float) sin( ((double)i/(double)TABLE_SIZE) * M_PI * 2. );
+    }
+}
 
 //Phase stepsize calculation from frequency
 unsigned int stepsize(int freq){
@@ -136,13 +181,7 @@ int main(void)
     PaError err;
     paTestData data;
     int i;
-
-    
-    /* initialise sinusoidal wavetable */
-    for( i=0; i<TABLE_SIZE; i++ )
-    {
-        data.sine[i] = (float) sin( ((double)i/(double)TABLE_SIZE) * M_PI * 2. );
-    }
+	
     data.phase = 0;
     
     err = Pa_Initialize();
@@ -158,7 +197,23 @@ int main(void)
     outputParameters.suggestedLatency = Pa_GetDeviceInfo( outputParameters.device )->defaultLowOutputLatency;
     outputParameters.hostApiSpecificStreamInfo = NULL;
 
-
+    data.sine[0] = -1;
+    data.sine[1] = -1;
+    data.sine[2] = -1;
+    data.sine[3] = -1;
+    data.sine[4] = -1;
+    data.sine[5] = -1;
+    data.sine[6] = -1;
+    data.sine[7] = -1;
+    data.sine[8] = -1;
+    data.sine[9] = -1;
+    data.sine[10] = -1;
+    data.sine[11] = -1;
+    data.sine[12] = 1;
+    data.sine[13] = 1;
+    data.sine[14] = 1;
+    data.sine[15] = 1;
+    
 	//Open Audio Stream
     err = Pa_OpenStream(
               &stream,
@@ -178,34 +233,110 @@ int main(void)
     err = Pa_StartStream( stream );
     if( err != paNoError ) goto error;
 
-    for(i=0;i<8;i++){
+
+	int g0 = 2*196;
+	int ab0 = 2*208;
+	int bb0 = 2*233;
+	int c1 = 2*261;
+	int d1 = 2*294;
+	int eb1 = 2*311;
+	int e1 = 2*329;
+	int f1 = 2*349;
+	int g1 = 2*391;
+	int ab1 = 2*415;
+	int bb1 = 2*466;
+	int c2 = 2*523;
+	int d2 = 2*587;
+	int eb2 = 2*622;
+	int e2 = 2*659;
+	int f2 = 2*698;
+	int g2 = 2*784;
+	int ab2 = 2*830;
+	int bb2 = 2*932;
+
+	for(i=0;i<26;i++){
     	switch(i){
     		case 0:
-    			data.frequency = 261;
+    			data.frequency = c1;
     			break;
     		case 1:
-    			data.frequency = 293;
+    			data.frequency = g0;
     			break;
     		case 2:
-    			data.frequency = 329;
+    			data.frequency = c1;
     			break;
 	    	case 3:
-   	 			data.frequency = 349;
+   	 			data.frequency = e1;
    	 			break;
    		 	case 4:
-    			data.frequency = 391;
+    			data.frequency = g1;
     			break;
    		 	case 5:
-    			data.frequency = 440;
+    			data.frequency = c2;
     			break;
     		case 6:
-    			data.frequency = 493;
+    			data.frequency = g1;
     			break;
     		case 7:
-    			data.frequency = 523;
+    			data.frequency = ab0;
     			break; 
-    	}   	
-    	Pa_Sleep( NUM_SECONDS * 100 );  
+    		case 8:
+    			data.frequency = c1;
+    			break;
+    		case 9:
+    			data.frequency = eb1;
+    			break;
+    		case 10:
+    			data.frequency = ab1;
+    			break;
+	    	case 11:
+   	 			data.frequency = eb1;
+   	 			break;
+   		 	case 12:
+    			data.frequency = ab1;
+    			break;
+   		 	case 13:
+    			data.frequency = c2;
+    			break;
+    		case 14:
+    			data.frequency = eb2;
+    			break;
+    		case 15:
+    			data.frequency = ab2;
+    			break;
+    		case 16:
+    			data.frequency = eb2;
+    			break;
+    		case 17:
+    			data.frequency = bb0;
+    			break;
+    		case 18:
+    			data.frequency = d1;
+    			break;
+	    	case 19:
+   	 			data.frequency = f1;
+   	 			break;
+   		 	case 20:
+    			data.frequency = bb1;
+    			break;
+   		 	case 21:
+    			data.frequency = f1;
+    			break;
+    		case 22:
+    			data.frequency = bb1;
+    			break;
+    		case 23:
+    			data.frequency = d2;
+    			break; 
+    		case 24:
+    			data.frequency = f2;
+    			break;
+    		case 25:
+    			data.frequency = bb2;
+    			break;           			
+    	} 
+    	//printf("%d",i);  	
+    	Pa_Sleep( NUM_SECONDS * 30 );  
     }
     
     

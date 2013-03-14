@@ -57,7 +57,7 @@
 
 //Power of wavetable size (wavetable size = 2 ^ POWER)
 #define POWER (4)
-#define TABLE_SIZE   (1<<POWER)
+#define TABLE_SIZE   ((int)pow(2,POWER))
 
 //Pi, for generation of sine table
 #ifndef M_PI

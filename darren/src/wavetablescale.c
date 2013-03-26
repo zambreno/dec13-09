@@ -46,9 +46,6 @@
 #include <math.h>
 #include "portaudio.h"
 
-//NUM-SECONDS is simply a playback mechanism
-#define NUM_SECONDS   (1)
-
 //Sample rate of the soundcard
 #define SAMPLE_RATE   (32000)
 
@@ -59,10 +56,6 @@
 #define POWER (4)
 #define TABLE_SIZE   (1<<POWER)
 
-//Pi, for generation of sine table
-#ifndef M_PI
-#define M_PI  (3.14159265)
-#endif
 
 //Note struct
 typedef struct
@@ -74,45 +67,20 @@ typedef struct
 }
 paTestData;
 
+volatile float tri;
+volatile float sq1;
+volatile float sq2;
 
-//Generate Tri Wave
-void triangle(paTestData data){
-    data.sine[0] = 0;
-    data.sine[1] = .25;
-    data.sine[2] = .5;
-    data.sine[3] = .75;
-    data.sine[4] = 1;
-    data.sine[5] = .75;
-    data.sine[6] = .5;
-    data.sine[7] = .25;
-    data.sine[8] = 0;
-    data.sine[9] = -.25;
-    data.sine[10] = -.5;
-    data.sine[11] = -.75;
-    data.sine[12] = -1;
-    data.sine[13] = -.75;
-    data.sine[14] = -.5;
-    data.sine[15] = -.25;
+
+//Generate Waves
+void wavetablegen(void){
+    int i;
+    for (i=0;i<TABLE_SIZE;i++){
+    	if (i<(TABLE_SIZE/4))
+    
+    }
 }
 
-void square(paTestData data){
-    data.sine[0] = -1;
-    data.sine[1] = -1;
-    data.sine[2] = -1;
-    data.sine[3] = -1;
-    data.sine[4] = -1;
-    data.sine[5] = -1;
-    data.sine[6] = -1;
-    data.sine[7] = -1;
-    data.sine[8] = -1;
-    data.sine[9] = -1;
-    data.sine[10] = -1;
-    data.sine[11] = -1;
-    data.sine[12] = 1;
-    data.sine[13] = 1;
-    data.sine[14] = 1;
-    data.sine[15] = 1;
-}
 
 void sine(paTestData data){
     /* initialise sinusoidal wavetable */

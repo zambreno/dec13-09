@@ -54,46 +54,63 @@
 
 //Power of wavetable size (wavetable size = 2 ^ POWER)
 #define POWER (4)
-#define TABLE_SIZE   (1<<POWER)
-
+#define TABLE_SIZE  (1<<POWER)
+#define NUM_SECONDS (1)
 
 //Note struct
 typedef struct
 {
-    float sine[TABLE_SIZE];
     unsigned short phase;
-    char message[20];
     int frequency;
 }
-paTestData;
+polyVoice;
 
-volatile float tri;
-volatile float sq1;
-volatile float sq2;
 
+//Wave tables - tri is triangle, sq1 is a 50% duty cycle, sq2 is a 25%, nse is a noise
+volatile short tri[TABLE_SIZE];
+volatile short sq1[TABLE_SIZE];
+volatile short sq2[TABLE_SIZE];
+volatile short nse[TABLE_SIZE];
 
 //Generate Waves
 void wavetablegen(void){
+
     int i;
-    for (i=0;i<TABLE_SIZE;i++){
-    	if (i<(TABLE_SIZE/4))
     
+    //Divide TABLE_SIZE into four regions
+    int quarter = TABLE_SIZE/4;
+    int half = TABLE_SIZE/2;
+    int three_fourths = 3*quarter;
+    
+    //Cycle through the entirety of TABLE_SIZE and generate triangle, and square waves
+    //The triangle wave statement takes the current index of the for loop, casts it to a float (to do division), and scales it to do the correct math in triangle wave generation
+	for (i=0;i<TABLE_SIZE;i++){
+		//First half of the wave
+    	if (i<half){
+    		tri[i] = -32768 + (((float)i/quarter) * 32768);
+    		sq1[i] = -32768;
+    		sq2[i] = -32768;
+    	}
+    	//Third quarter of the wave
+    	else if (i<three_fourths){
+    		tri[i] = 32767 - ((((float)i-half)/quarter) * 32768);
+    		sq1[i] = 32767;
+    		sq2[i] = -32768;
+    	}
+    	//Fourth quarter of the wave
+    	else {
+    		tri[i] = 32768 - ((((float)i-half)/quarter) * 32768);
+    		sq1[i] = 32767;
+    		sq2[i] = 32767;
+    	}
+    	nse[i] = rand() % 32768 - 16384;
     }
 }
 
-
-void sine(paTestData data){
-    /* initialise sinusoidal wavetable */
-    int i;
-    for( i=0; i<TABLE_SIZE; i++ )
-    {
-        data.sine[i] = (float) sin( ((double)i/(double)TABLE_SIZE) * M_PI * 2. );
-    }
-}
 
 //Phase stepsize calculation from frequency
 unsigned int stepsize(int freq){
-	//Maximum value of phase scale (2^4 in this case)
+	//Maximum value of phase scale (16^4 in this case)
 	float phasescale = 0xFFFF;
 	float step;
 	
@@ -114,7 +131,7 @@ static int patestCallback( const void *inputBuffer, void *outputBuffer,
                             PaStreamCallbackFlags statusFlags,
                             void *userData )
 {
-    paTestData *data = (paTestData*)userData;
+    polyVoice *data = (polyVoice*)userData;
     float *out = (float*)outputBuffer;
     unsigned long i;
 
@@ -124,7 +141,10 @@ static int patestCallback( const void *inputBuffer, void *outputBuffer,
     
     for( i=0; i<framesPerBuffer; i++ )
     {
-        *out++ = data->sine[(data->phase)>>(16-POWER)];  /* Advance Phase */
+    	//Lookup the wave value of the current phase (Only uses the top 16-POWER bits of phase, to allow for table sizes smaller than the phase register)
+        *out++ = ( (float)sq2[(data->phase)>>(16-POWER)]) / 32768;  
+        
+        /* Advance Phase */
         data->phase += stepsize(data->frequency);
     }
     
@@ -137,17 +157,19 @@ static int patestCallback( const void *inputBuffer, void *outputBuffer,
  */
 static void StreamFinished( void* userData )
 {
-   paTestData *data = (paTestData *) userData;
+   polyVoice *data = (polyVoice *) userData;
 }
 
 /*******************************************************************/
 int main(void);
 int main(void)
 {
+	wavetablegen();
+	
     PaStreamParameters outputParameters;
     PaStream *stream;
     PaError err;
-    paTestData data;
+    polyVoice data;
     int i;
 	
     data.phase = 0;
@@ -165,22 +187,7 @@ int main(void)
     outputParameters.suggestedLatency = Pa_GetDeviceInfo( outputParameters.device )->defaultLowOutputLatency;
     outputParameters.hostApiSpecificStreamInfo = NULL;
 
-    data.sine[0] = -1;
-    data.sine[1] = -1;
-    data.sine[2] = -1;
-    data.sine[3] = -1;
-    data.sine[4] = -1;
-    data.sine[5] = -1;
-    data.sine[6] = -1;
-    data.sine[7] = -1;
-    data.sine[8] = -1;
-    data.sine[9] = -1;
-    data.sine[10] = -1;
-    data.sine[11] = -1;
-    data.sine[12] = 1;
-    data.sine[13] = 1;
-    data.sine[14] = 1;
-    data.sine[15] = 1;
+
     
 	//Open Audio Stream
     err = Pa_OpenStream(
@@ -194,7 +201,6 @@ int main(void)
               &data );
     if( err != paNoError ) goto error;
 
-    sprintf( data.message, "No Message" );
     err = Pa_SetStreamFinishedCallback( stream, &StreamFinished );
     if( err != paNoError ) goto error;
 

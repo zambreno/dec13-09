@@ -52,10 +52,10 @@
 #define SAMPLE_RATE   (32000)
 
 //Audio buffer size
-#define FRAMES_PER_BUFFER  (256)
+#define FRAMES_PER_BUFFER  (1024)
 
 //Number of Poly Voices per module
-#define NUM_POLYVOICES (127)
+#define NUM_POLYVOICES (60)
 
 //Power of wavetable size (wavetable size = 2 ^ POWER)
 #define POWER (4)
@@ -78,7 +78,6 @@ volatile short sq1[TABLE_SIZE];
 volatile short sq2[TABLE_SIZE];
 volatile short nse[TABLE_SIZE];
 
-
 //Initialize Polyvoices
 void polyVoice_init(polyVoice module[]){
 	int i;
@@ -89,8 +88,6 @@ void polyVoice_init(polyVoice module[]){
 		module[i].note=0;
 	}
 }
-
-
 
 //Generate Waves
 void wavetablegen(void){
@@ -154,18 +151,26 @@ static int patestCallback( const void *inputBuffer, void *outputBuffer,
 	polyVoice *data = (polyVoice*)userData;
     float *out = (float*)outputBuffer;
     unsigned long i;
+    int j;
 
     (void) timeInfo; /* Prevent unused variable warnings. */
     (void) statusFlags;
     (void) inputBuffer;
+    
+    float frameVal;
 
     for( i=0; i<framesPerBuffer; i++ )
     {
+    	frameVal=0;
     	//Lookup the wave value of the current phase (Only uses the top 16-POWER bits of phase, to allow for table sizes smaller than the phase register)
-        *out++ = ( (float)sq2[(data->phase)>>(16-POWER)]) / 32768;  
+    	for (j=0;j<NUM_POLYVOICES;j++){
+    	    frameVal += ( (float)sq2[(data[j].phase)>>(16-POWER)]) / 32768;    
+        	/* Advance Phase */
+        	data[j].phase += stepsize(data[j].frequency);
+    	}
+        *out++ = frameVal;
         
-        /* Advance Phase */
-        data->phase += stepsize(data->frequency);
+        
     }
 
     return paContinue;
@@ -215,7 +220,7 @@ int main(void)
               FRAMES_PER_BUFFER,
               paClipOff,      /* we won't output out of range samples so don't bother clipping them */
               patestCallback,
-              &module1[0]);
+              &module1);
 	if( err != paNoError ) goto error;
 
 	err = Pa_SetStreamFinishedCallback( stream, &StreamFinished );
@@ -224,14 +229,27 @@ int main(void)
 	//Start Stream
     	err = Pa_StartStream( stream );
    	if( err != paNoError ) goto error;
+   	
+   	
 	int i;
+	int j;
+	for (j=0;j<5;j++){
 	for (i=0;i<100;i++){
-		module1[0].frequency = 500 + 10*i;
+		module1[0].frequency = 800 + 10*i;
 		module1[0].note = 60;
 		module1[0].isActive = 1;
+		module1[1].frequency = 500 + 10*i;
+		module1[1].note = 60;
+		module1[1].isActive = 1;
+		module1[2].frequency = 200 + 10*i;
+		module1[2].note = 60;
+		module1[2].isActive = 1;
 		Pa_Sleep(10);
 	}
-
+	Pa_Sleep(50);
+	}
+	
+	
      //Stop stream
     err = Pa_StopStream( stream );
     if( err != paNoError ) goto error;

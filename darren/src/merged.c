@@ -183,12 +183,13 @@ static void StreamFinished( void* userData )
 
 /*******************************************************************/
 void doAction(PmEvent data) {
+	// TODO: Put the polyvoice logic in here. :D
 	printf("status:%d, byte1=%d, byte2=%d, time=%.3f\n",
-		Pm_MessageStatus(msg[i].message),
-		Pm_MessageData1(msg[i].message),
-		Pm_MessageData2(msg[i].message),
-		msg[i].timestamp/1000.0);
-	module1[0].frequency = 500 + 10*i;
+		Pm_MessageStatus(data.message),
+		Pm_MessageData1(data.message),
+		Pm_MessageData2(data.message),
+		data.timestamp/1000.0);
+	module1[0].frequency = 500 + 10;
 	module1[0].note = 60;
 	module1[0].isActive = 1;
 	return;
@@ -231,7 +232,7 @@ void readMIDI() { // Reads the MIDI input stream
 	cnt = Pm_CountDevices();
 	
 	if(cnt) {
-		interpetMIDI();
+		interpretMIDI();
 	}
 	else {
 		printf("No MIDI devices found\n");

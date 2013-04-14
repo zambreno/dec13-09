@@ -72,8 +72,6 @@ typedef struct
 }
 polyVoice;
 
-volatile polyVoice module1[NUM_POLYVOICES];
-
 //Wave tables - tri is triangle, sq1 is a 50% duty cycle, sq2 is a 25%, nse is a noise
 volatile short tri[TABLE_SIZE];
 volatile short sq1[TABLE_SIZE];
@@ -153,6 +151,7 @@ static int patestCallback( const void *inputBuffer, void *outputBuffer,
                             PaStreamCallbackFlags statusFlags,
                             void *userData )
 {
+	polyVoice *data = (polyVoice*)userData;
     float *out = (float*)outputBuffer;
     unsigned long i;
 
@@ -163,10 +162,10 @@ static int patestCallback( const void *inputBuffer, void *outputBuffer,
     for( i=0; i<framesPerBuffer; i++ )
     {
     	//Lookup the wave value of the current phase (Only uses the top 16-POWER bits of phase, to allow for table sizes smaller than the phase register)
-        *out++ = ( (float)sq2[module1[0].phase>>(16-POWER)]) / 32768;
-
+        *out++ = ( (float)sq2[(data->phase)>>(16-POWER)]) / 32768;  
+        
         /* Advance Phase */
-        module1[0].phase += stepsize(module1[0].frequency);
+        data->phase += stepsize(data->frequency);
     }
 
     return paContinue;
@@ -186,6 +185,7 @@ int main(void);
 int main(void)
 {
 	wavetablegen();
+	polyVoice module1[NUM_POLYVOICES];
 	polyVoice_init(module1);
 
 
@@ -215,7 +215,7 @@ int main(void)
               FRAMES_PER_BUFFER,
               paClipOff,      /* we won't output out of range samples so don't bother clipping them */
               patestCallback,
-              NULL );
+              &module1[0]);
 	if( err != paNoError ) goto error;
 
 	err = Pa_SetStreamFinishedCallback( stream, &StreamFinished );
@@ -224,11 +224,13 @@ int main(void)
 	//Start Stream
     	err = Pa_StartStream( stream );
    	if( err != paNoError ) goto error;
-
-	module1[0].frequency = 500;
-	module1[0].note = 60;
-	module1[0].isActive = 1;
-	Pa_Sleep(10000);
+	int i;
+	for (i=0;i<100;i++){
+		module1[0].frequency = 500 + 10*i;
+		module1[0].note = 60;
+		module1[0].isActive = 1;
+		Pa_Sleep(10);
+	}
 
      //Stop stream
     err = Pa_StopStream( stream );

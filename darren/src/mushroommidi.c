@@ -55,7 +55,7 @@
 #define FRAMES_PER_BUFFER  (128)
 
 //Number of Poly Voices per module
-#define NUM_POLYVOICES (127)
+#define NUM_POLYVOICES (4)
 
 //Power of wavetable size (wavetable size = 2 ^ POWER)
 #define POWER (4)

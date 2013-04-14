@@ -52,14 +52,15 @@
 #define SAMPLE_RATE   (32000)
 
 //Audio buffer size
-#define FRAMES_PER_BUFFER  (1024)
+#define FRAMES_PER_BUFFER  (128)
 
 //Number of Poly Voices per module
-#define NUM_POLYVOICES (60)
+#define NUM_POLYVOICES (127)
 
 //Power of wavetable size (wavetable size = 2 ^ POWER)
 #define POWER (4)
 #define TABLE_SIZE  (1<<POWER)
+#define PHASESCALE ((1<<17)-1)
 #define NUM_SECONDS (1)
 
 //Note struct
@@ -104,23 +105,23 @@ void wavetablegen(void){
 	for (i=0;i<TABLE_SIZE;i++){
 		//First half of the wave
     		if (i<half){
-    			tri[i] = -32768 + (((float)i/quarter) * 32768);
-    			sq1[i] = -32768;
-    			sq2[i] = -32768;
+    			tri[i] = -16384 + (((float)i/quarter) * 16384);
+    			sq1[i] = -16384;
+    			sq2[i] = -16384;
     		}
     		//Third quarter of the wave
     		else if (i<three_fourths){
-    			tri[i] = 32767 - ((((float)i-half)/quarter) * 32768);
-    			sq1[i] = 32767;
-    			sq2[i] = -32768;
+    			tri[i] = 16383 - ((((float)i-half)/quarter) * 16384);
+    			sq1[i] = 16383;
+    			sq2[i] = -16384;
     		}
     		//Fourth quarter of the wave
     		else {
-    			tri[i] = 32768 - ((((float)i-half)/quarter) * 32768);
-    			sq1[i] = 32767;
-    			sq2[i] = 32767;
+    			tri[i] = 16384 - ((((float)i-half)/quarter) * 16384);
+    			sq1[i] = 16383;
+    			sq2[i] = 16383;
     		}
-    		nse[i] = rand() % 32768 - 16384;
+    		nse[i] = rand() % 16384 - 16384;
     	}
 }
 
@@ -128,12 +129,11 @@ void wavetablegen(void){
 //Phase stepsize calculation from frequency
 unsigned int stepsize(int freq){
 	//Maximum value of phase scale (16^4 in this case)
-	float phasescale = 0xFFFF;
-	float step;
+	int step;
 
 	//Our equation!
-	step = (freq*phasescale)/SAMPLE_RATE;
-	return (unsigned short)step;
+	step = (freq*PHASESCALE)/SAMPLE_RATE;
+	return step;
 }
 
 
@@ -157,18 +157,19 @@ static int patestCallback( const void *inputBuffer, void *outputBuffer,
     (void) statusFlags;
     (void) inputBuffer;
     
-    float frameVal;
+    long frameVal;
+    int phase_truncated = 16-POWER;
 
     for( i=0; i<framesPerBuffer; i++ )
     {
     	frameVal=0;
     	//Lookup the wave value of the current phase (Only uses the top 16-POWER bits of phase, to allow for table sizes smaller than the phase register)
     	for (j=0;j<NUM_POLYVOICES;j++){
-    	    frameVal += ( (float)sq2[(data[j].phase)>>(16-POWER)]) / 32768;    
+    	    frameVal += (sq2[(data[j].phase)>>(phase_truncated)]);    
         	/* Advance Phase */
         	data[j].phase += stepsize(data[j].frequency);
     	}
-        *out++ = frameVal;
+        *out++ = (float)frameVal / 32768;
         
         
     }
@@ -233,7 +234,7 @@ int main(void)
    	
 	int i;
 	int j;
-	for (j=0;j<5;j++){
+	for (j=0;j<1;j++){
 	for (i=0;i<100;i++){
 		module1[0].frequency = 800 + 10*i;
 		module1[0].note = 60;

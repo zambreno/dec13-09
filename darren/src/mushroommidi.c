@@ -93,6 +93,12 @@ void polyVoice_init(polyVoice module[]){
 	}
 }
 
+//Midi Note to Frequency
+double MtoF(int note){
+	return pow(2,(((double)note - 69)/12.0))*440.0;
+}
+
+
 //Generate Waves
 void wavetablegen(void){
 
@@ -198,9 +204,9 @@ void doAction(PmEvent data) {
 		Pm_MessageData1(data.message),
 		Pm_MessageData2(data.message),
 		data.timestamp/1000.0);
-	module1[0].frequency = 500 + 10;
-	module1[0].note = 60;
-	module1[0].isActive = 1;
+	module1[0].frequency = MtoF(Pm_MessageData1(data.message));
+	module1[0].note = Pm_MessageData1(data.message);
+	module1[0].isActive = Pm_MessageData2(data.message);
 	return;
 }
 

@@ -189,9 +189,9 @@ void doAction(PmEvent data) {
 		Pm_MessageData1(data.message),
 		Pm_MessageData2(data.message),
 		data.timestamp/1000.0);
-	module1[0].frequency = 500 + 10;
+	module1[0].frequency = 500;
 	module1[0].note = 60;
-	module1[0].isActive = 1;
+	module1[0].isActive = Pm_MessageData2(data.message);
 	return;
 }
 

@@ -52,15 +52,17 @@
 #define SAMPLE_RATE   (32000)
 
 //Audio buffer size
-#define FRAMES_PER_BUFFER  (1024)
+#define FRAMES_PER_BUFFER  (128)
 
 //Number of Poly Voices per module
-#define NUM_POLYVOICES (60)
+#define NUM_POLYVOICES (127)
 
 //Power of wavetable size (wavetable size = 2 ^ POWER)
 #define POWER (4)
 #define TABLE_SIZE  (1<<POWER)
+#define PHASESCALE ((1<<17)-1)
 #define NUM_SECONDS (1)
+
 
 //Note struct
 typedef struct
@@ -71,6 +73,8 @@ typedef struct
 	int note;
 }
 polyVoice;
+
+polyVoice module1[NUM_POLYVOICES];
 
 //Wave tables - tri is triangle, sq1 is a 50% duty cycle, sq2 is a 25%, nse is a noise
 volatile short tri[TABLE_SIZE];
@@ -89,6 +93,12 @@ void polyVoice_init(polyVoice module[]){
 	}
 }
 
+//Midi Note to Frequency
+double MtoF(int note){
+	return pow(2,(((double)note - 69)/12.0))*440.0;
+}
+
+
 //Generate Waves
 void wavetablegen(void){
 
@@ -104,23 +114,23 @@ void wavetablegen(void){
 	for (i=0;i<TABLE_SIZE;i++){
 		//First half of the wave
     		if (i<half){
-    			tri[i] = -32768 + (((float)i/quarter) * 32768);
-    			sq1[i] = -32768;
-    			sq2[i] = -32768;
+    			tri[i] = -16384 + (((float)i/quarter) * 16384);
+    			sq1[i] = -16384;
+    			sq2[i] = -16384;
     		}
     		//Third quarter of the wave
     		else if (i<three_fourths){
-    			tri[i] = 32767 - ((((float)i-half)/quarter) * 32768);
-    			sq1[i] = 32767;
-    			sq2[i] = -32768;
+    			tri[i] = 16383 - ((((float)i-half)/quarter) * 16384);
+    			sq1[i] = 16383;
+    			sq2[i] = -16384;
     		}
     		//Fourth quarter of the wave
     		else {
-    			tri[i] = 32768 - ((((float)i-half)/quarter) * 32768);
-    			sq1[i] = 32767;
-    			sq2[i] = 32767;
+    			tri[i] = 16384 - ((((float)i-half)/quarter) * 16384);
+    			sq1[i] = 16383;
+    			sq2[i] = 16383;
     		}
-    		nse[i] = rand() % 32768 - 16384;
+    		nse[i] = rand() % 16384 - 16384;
     	}
 }
 
@@ -128,12 +138,11 @@ void wavetablegen(void){
 //Phase stepsize calculation from frequency
 unsigned int stepsize(int freq){
 	//Maximum value of phase scale (16^4 in this case)
-	float phasescale = 0xFFFF;
-	float step;
+	int step;
 
 	//Our equation!
-	step = (freq*phasescale)/SAMPLE_RATE;
-	return (unsigned short)step;
+	step = (freq*PHASESCALE)/SAMPLE_RATE;
+	return step;
 }
 
 
@@ -157,22 +166,24 @@ static int patestCallback( const void *inputBuffer, void *outputBuffer,
     (void) statusFlags;
     (void) inputBuffer;
     
-    float frameVal;
+    long frameVal;
+    int phase_truncated = 16-POWER;
 
     for( i=0; i<framesPerBuffer; i++ )
     {
     	frameVal=0;
     	//Lookup the wave value of the current phase (Only uses the top 16-POWER bits of phase, to allow for table sizes smaller than the phase register)
     	for (j=0;j<NUM_POLYVOICES;j++){
-    	    frameVal += ( (float)sq2[(data[j].phase)>>(16-POWER)]) / 32768;    
-        	/* Advance Phase */
-        	data[j].phase += stepsize(data[j].frequency);
+    		if (data[j].isActive){
+	    	    frameVal += (sq2[(data[j].phase)>>(phase_truncated)]);    
+    	    	/* Advance Phase */
+       	 		data[j].phase += stepsize(data[j].frequency);
+       	 	}
     	}
-        *out++ = frameVal;
+        *out++ = (float)frameVal / 65536;
         
         
     }
-
     return paContinue;
 }
 
@@ -186,11 +197,90 @@ static void StreamFinished( void* userData )
 }
 
 /*******************************************************************/
+void doAction(PmEvent data) {
+	// TODO: Put the polyvoice logic in here. :D
+	int status = Pm_MessageStatus(data.message);
+	int channel;
+	int note = Pm_MessageData1(data.message);
+	int velocity = Pm_MessageData2(data.message);
+	int i;
+	int j = 0;
+	//printf("status:%d, byte1=%d, byte2=%d, time=%.3f\n", status, note, velocity, data.timestamp/1000.0);
+	for (i=0;i<NUM_POLYVOICES;i++){
+		if (module1[i].note == note){
+			j=1;
+			module1[i].frequency = MtoF(note);
+			module1[i].note = note;
+			module1[i].isActive = velocity;
+			if (status==0x80){
+				module1[i].isActive=0;
+			}
+		}
+	}
+	if (j!=1){
+		for (i=0;i<NUM_POLYVOICES;i++){
+			if(module1[i].isActive == 0){
+				module1[i].frequency = MtoF(note);
+				module1[i].note = note;
+				module1[i].isActive =velocity;
+				return;
+			}
+		}
+	}
+	return;
+}
+
+
+void interpretMIDI() {
+	int dev = 2; // dev is the device, should always be 2		
+	int i;
+	PmError retval;
+	const PmDeviceInfo *info;
+	PmEvent msg[32];
+	PortMidiStream *mstream;
+
+	Pt_Start(1, NULL, NULL);
+	retval = Pm_OpenInput(&mstream, dev, NULL, 512L, NULL, NULL);
+	
+	if(retval != pmNoError) {
+		printf("error: %s \n", Pm_GetErrorText(retval));
+	}
+	else {
+		while(1) {
+			if(Pm_Poll(mstream)) {
+				int cnt = Pm_Read(mstream, msg, 32);
+				for(i=0; i<cnt; i++) {
+					doAction(msg[i]);					
+				}
+			}
+		}
+	}
+	Pm_Close(mstream);
+	return;
+}
+
+void readMIDI() { // Reads the MIDI input stream
+
+	int cnt;
+
+	Pm_Initialize();
+	cnt = Pm_CountDevices();
+	
+	if(cnt) {
+		interpretMIDI();
+	}
+	else {
+		printf("No MIDI devices found\n");
+	}
+	Pm_Terminate();
+	return;
+}
+/*******************************************************************/
+
 int main(void);
 int main(void)
 {
 	wavetablegen();
-	polyVoice module1[NUM_POLYVOICES];
 	polyVoice_init(module1);
 
 
@@ -231,9 +321,9 @@ int main(void)
    	if( err != paNoError ) goto error;
    	
    	
-	int i;
+/*	int i;
 	int j;
-	for (j=0;j<5;j++){
+	for (j=0;j<1;j++){
 	for (i=0;i<100;i++){
 		module1[0].frequency = 800 + 10*i;
 		module1[0].note = 60;
@@ -247,7 +337,9 @@ int main(void)
 		Pa_Sleep(10);
 	}
 	Pa_Sleep(50);
-	}
+	}*/
+	
+	readMIDI();
 	
 	
      //Stop stream
